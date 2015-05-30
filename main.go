@@ -1,15 +1,25 @@
 package main
 
 import (
+    "os"
     "fmt"
+    "strings"
+    "errors"
     "golang.org/x/oauth2"
     "github.com/google/go-github/github"
 )
 
 func main() {
-    fmt.Println("Updating labels")
-    DeleteCurrentLabels("XXX", "XXX")
-    AddLabels("XXX", "XXX")
+    config := strings.Split(os.Args[1], "/")
+    if len(config) != 2 {
+        err := errors.New("Github repo not provided")
+        fmt.Println(err)
+        os.Exit(1)
+    }
+    owner, repo := config[0], config[1]
+    fmt.Println("Updating the labels within", owner, repo)
+    DeleteCurrentLabels(owner, repo)
+    AddLabels(owner, repo)
 }
 
 type tokenSource struct {
@@ -69,6 +79,7 @@ func AddLabels(owner string, repo string) {
     for _, label := range labels {
         gh_label := github.Label{Name: &label.Name, Color: &label.Color}
         client.Issues.CreateLabel(owner, repo, &gh_label)
+        fmt.Println("Added", *gh_label.Name, "from", owner, repo)
     }
 }
 
