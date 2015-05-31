@@ -4,23 +4,64 @@ import (
     "os"
     "os/exec"
     "fmt"
+    "log"
     "strings"
     "errors"
     "golang.org/x/oauth2"
     "github.com/google/go-github/github"
+    "github.com/codegangsta/cli"
 )
 
 func main() {
-    config := strings.Split(os.Args[1], "/")
+    app := cli.NewApp()
+    app.Name = "labels"
+    app.Usage = "Mange Github labels from the command line"
+    app.Action = func(c *cli.Context) {
+        fmt.Println("Yeah okay")
+    }
+    app.Commands = []cli.Command{
+        {
+            Name:      "add",
+            Aliases:   []string{"a"},
+            Usage:     "add labels to a github repo",
+            Action: func(c *cli.Context) {
+                println("added task: ", c.Args().First())
+                githubrepo := c.Args().First()
+                owner, repo, err := ParseRepoArgument(githubrepo)
+                if err != nil {
+                    log.Fatal(err)
+                    os.Exit(1)
+                }
+                AddLabels(owner, repo)
+            },
+        },
+        {
+            Name: "delete",
+            Aliases: []string{"d"},
+            Usage: "delete all labels from a github repo",
+            Action: func(c *cli.Context) {
+                println("delete: ", c.Args().First())
+                githubrepo := c.Args().First()
+                owner, repo, err := ParseRepoArgument(githubrepo)
+                if err != nil {
+                    log.Fatal(err)
+                    os.Exit(1)
+                }
+                DeleteCurrentLabels(owner, repo)
+            },
+        },
+    }
+    app.Run(os.Args)
+}
+
+func ParseRepoArgument(repo string) (string, string, error) {
+    config := strings.Split(repo, "/")
+    fmt.Println(config)
     if len(config) != 2 {
         err := errors.New("Github repo not provided")
-        fmt.Println(err)
-        os.Exit(1)
+        return "", "", err
     }
-    owner, repo := config[0], config[1]
-    fmt.Println("Updating the labels within", owner, repo)
-    DeleteCurrentLabels(owner, repo)
-    AddLabels(owner, repo)
+    return config[0], config[1], nil
 }
 
 type tokenSource struct {
@@ -87,12 +128,11 @@ type Label struct {
 
 func AddLabels(owner string, repo string) {
     client := GithubClient()
-    labels := []Label{{ Name: "XXX", Color: "XXX" },
-                      { Name: "XXX", Color: "XXX" }}
+    labels := []Label{{ Name: "Ready For Review", Color: "24c0eb" }}
     for _, label := range labels {
         gh_label := github.Label{Name: &label.Name, Color: &label.Color}
         client.Issues.CreateLabel(owner, repo, &gh_label)
-        fmt.Println("Added", *gh_label.Name, "from", owner, repo)
+        fmt.Println("Added '", *gh_label.Name, "' to", owner, repo)
     }
 }
 
