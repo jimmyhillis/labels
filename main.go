@@ -2,6 +2,7 @@ package main
 
 import (
     "os"
+    "os/exec"
     "fmt"
     "strings"
     "errors"
@@ -26,13 +27,25 @@ type tokenSource struct {
   token *oauth2.Token
 }
 
+func GithubToken() (string, error) {
+    out, err := exec.Command("git", "config", "--global", "github.token").Output()
+    if err != nil {
+      return "", err
+    }
+    return string(out), nil
+}
+
 // add Token() method to satisfy oauth2.TokenSource interface
 func (t *tokenSource) Token() (*oauth2.Token, error){
   return t.token, nil
 }
 
 func GithubClient() (*github.Client) {
-    token := "XXX"
+    token, err := GithubToken()
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
     ts := &tokenSource{
       &oauth2.Token{ AccessToken: token} ,
     }
@@ -83,9 +96,9 @@ func AddLabels(owner string, repo string) {
     }
 }
 
-func CurrentRepos() {
+func CurrentRepos(owner string) {
     client := GithubClient()
-    repos, _, err := client.Repositories.ListByOrg("meerkats", nil)
+    repos, _, err := client.Repositories.ListByOrg(owner, nil)
     if err != nil {
         fmt.Println(err)
         return
