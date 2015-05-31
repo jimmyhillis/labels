@@ -16,31 +16,31 @@ func main() {
     app := cli.NewApp()
     app.Name = "labels"
     app.Usage = "Mange Github labels from the command line"
-    app.Action = func(c *cli.Context) {
-        fmt.Println("Yeah okay")
-    }
     app.Commands = []cli.Command{
         {
-            Name:      "add",
-            Aliases:   []string{"a"},
-            Usage:     "add labels to a github repo",
+            Name: "add",
+            Aliases: []string{"a"},
+            Usage: "Adds labels to a Github repo",
             Action: func(c *cli.Context) {
-                println("added task: ", c.Args().First())
                 githubrepo := c.Args().First()
                 owner, repo, err := ParseRepoArgument(githubrepo)
                 if err != nil {
                     log.Fatal(err)
                     os.Exit(1)
                 }
-                AddLabels(owner, repo)
+                labels, err := ParseLabelArguments(c.Args()[1:])
+                if err != nil {
+                    log.Fatal(err)
+                    os.Exit(1)
+                }
+                AddLabels(owner, repo, labels)
             },
         },
         {
             Name: "delete",
             Aliases: []string{"d"},
-            Usage: "delete all labels from a github repo",
+            Usage: "Deletes labels from a github repo",
             Action: func(c *cli.Context) {
-                println("delete: ", c.Args().First())
                 githubrepo := c.Args().First()
                 owner, repo, err := ParseRepoArgument(githubrepo)
                 if err != nil {
@@ -62,6 +62,23 @@ func ParseRepoArgument(repo string) (string, string, error) {
         return "", "", err
     }
     return config[0], config[1], nil
+}
+
+func ParseLabelArguments(labelopts []string) ([]Label, error) {
+    labels := []Label{}
+    if len(labelopts) == 0 {
+        err := errors.New("No labels provided")
+        return []Label{}, err
+    }
+    for _, label := range labelopts {
+        parts := strings.Split(label, ":")
+        if len(parts) != 2 {
+            err := errors.New("Incorrect label format <name:color>")
+            return []Label{}, err
+        }
+        labels = append(labels, Label{ Name: parts[0], Color: parts[1] })
+    }
+    return labels, nil
 }
 
 type tokenSource struct {
@@ -126,9 +143,8 @@ type Label struct {
     Color string
 }
 
-func AddLabels(owner string, repo string) {
+func AddLabels(owner string, repo string, labels []Label) {
     client := GithubClient()
-    labels := []Label{{ Name: "Ready For Review", Color: "24c0eb" }}
     for _, label := range labels {
         gh_label := github.Label{Name: &label.Name, Color: &label.Color}
         client.Issues.CreateLabel(owner, repo, &gh_label)
