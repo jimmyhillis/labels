@@ -17,8 +17,8 @@ Add labels to a repo
 labels add jimmyhillis/labels label:color label:color
 ```
 
-Remove all labels from a repo
+Delete all labels from a repo
 
 ```sh
-labels remove jimmyhillis/labels
+labels delete jimmyhillis/labels
 ```
